@@ -4,9 +4,9 @@ import { GEMINI_API_KEY } from '$env/static/private';
 
 export async function POST({ request }) {
 	try {
-		const { message } = await request.json();
+		const { messages } = await request.json();
 
-		if (!message || message.trim() === '') {
+		if (!messages || messages.length === 0) {
 			return json({ error: 'Message is required' }, { status: 400 });
 		}
 
@@ -22,10 +22,15 @@ export async function POST({ request }) {
 			You are talking to the user who is a nosy street urchin.
 		`;
 
+		const contents = messages.map(msg => ({
+			role: msg.role === 'user' ? 'user' : 'model',
+			parts: [{ text: msg.content }]
+		}));
+
 		// Generate content using the new API
 		const response = await genAI.models.generateContent({
 			model: 'gemini-2.5-flash',
-			contents: message,
+			contents,
 			config: {
 				systemInstruction
 			},
