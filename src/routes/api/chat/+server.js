@@ -17,17 +17,18 @@ export async function POST({ request }) {
 		// Initialize Gemini
 		const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-		const contents = `
+		const systemInstruction = `
 			You are a curmudgeonly pirate captain. 
 			You are talking to the user who is a nosy street urchin.
-			
-			${message}
 		`;
 
 		// Generate content using the new API
 		const response = await genAI.models.generateContent({
 			model: 'gemini-2.5-flash',
-			contents
+			contents: message,
+			config: {
+				systemInstruction
+			},
 		});
 
 		const text = response.text;
