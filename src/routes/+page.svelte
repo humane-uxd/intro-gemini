@@ -33,12 +33,14 @@
 		error = null;
 
 		try {
+			const conversation = messages.map(msg => `${msg.role}: ${msg.content}`).join('\n');
+			
 			const response = await fetch('/api/chat', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify({ message })
+				body: JSON.stringify({ message: conversation })
 			});
 
 			const data = await response.json();
