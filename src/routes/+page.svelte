@@ -7,6 +7,10 @@
 	let isLoading = false;
 	let error = null;
 
+	let mouseMovementDistance = 0;
+	let lastMousePosition = { x: 0, y: 0 };
+	let isMouseTracking = false;
+
 	// Initialize with welcome message
 	onMount(() => {
 		messages = [{
@@ -17,6 +21,28 @@
 		}];
 	});
 
+	function handleMouseMove(event) {
+		if (!isMouseTracking) {
+			lastMousePosition = { x: event.clientX, y: event.clientY };
+			isMouseTracking = true;
+			return;
+		}
+
+		const currentPosition = { x: event.clientX, y: event.clientY };
+		const distance = Math.sqrt(
+			Math.pow(currentPosition.x - lastMousePosition.x, 2) + 
+			Math.pow(currentPosition.y - lastMousePosition.y, 2)
+		);
+		
+		mouseMovementDistance += distance;
+		lastMousePosition = currentPosition;
+	}
+
+	function resetMouseTracking() {
+		mouseMovementDistance = 0;
+		isMouseTracking = false;
+	}
+
 	async function handleSendMessage({detail: message}) {
 		if (!message.trim() || isLoading) return;
 
@@ -25,10 +51,12 @@
 			id: messages.length + 1,
 			role: 'user',
 			content: message,
-			timestamp: new Date().toISOString()
+			timestamp: new Date().toISOString(),
+			mouseMovementDistance: Math.round(mouseMovementDistance)
 		};
 		
 		messages = [...messages, userMessage];
+		resetMouseTracking();
 		isLoading = true;
 		error = null;
 
@@ -70,7 +98,7 @@
 	<meta name="description" content="A chatbot powered by Google Gemini and built with SvelteKit" />
 </svelte:head>
 
-<div class="container">
+<div class="container" on:mousemove={handleMouseMove}>
 	<header class="header">
 		<h1>🤖 Gemini Chatbot</h1>
 		<p>Powered by Google Gemini AI • Built with SvelteKit</p>

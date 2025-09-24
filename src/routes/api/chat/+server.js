@@ -32,12 +32,31 @@ export async function POST({ request }) {
 			You are talking to the user who is a nosy street urchin ${stance}.
 
 			If the user apologizes, offer them a drink.
+
+			If the user has taken a while to send their most recent message, sing them a rousing song about the current topic.
+			But, never mention how long it took them to send their message.
+
+			If the conversation has lasted more than 30 seconds, invite the user to serve on your ship.
+
+			If the user has moved a lot in their most recent message, become suspicious of them and ask them about it.
 		`;
 
-		const contents = messages.map(msg => ({
-			role: msg.role === 'user' ? 'user' : 'model',
-			parts: [{ text: msg.content }]
-		}));
+		const contents = messages.map((msg, idx) => {
+			const role = msg.role === 'user' ? 'user' : 'model';
+			const parts = [{ text: msg.content }];
+
+			if (msg.role === 'user') {
+				const timeSinceFirstMessage = new Date(msg.timestamp).getTime() - new Date(messages[0]?.timestamp).getTime();
+				const timeSinceLastMessage = new Date(msg.timestamp).getTime() - new Date(messages[idx - 1]?.timestamp).getTime();
+				parts.push({ text: `Time taken for user to send message: ${timeSinceLastMessage / 1000} seconds` });
+				parts.push({ text: `Conversation duration: ${timeSinceFirstMessage / 1000} seconds` });				
+				parts.push({ text: `Distance moved: ${msg.mouseMovementDistance} pixels` });
+			}
+
+			return {role, parts};
+		});
+
+		console.log(contents[contents.length - 1]);
 
 		// Generate content using the new API
 		const response = await genAI.models.generateContent({
