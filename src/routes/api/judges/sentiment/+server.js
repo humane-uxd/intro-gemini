@@ -34,11 +34,20 @@ export async function POST({ request }) {
 			model: 'gemini-2.5-flash-lite',
 			contents,
 			config: {
-				systemInstruction
+				systemInstruction,
+				responseMimeType: 'application/json',
+				responseSchema: {
+					type: 'object',
+					properties: {
+						color: { type: 'string' },
+						sentiment: { type: 'string' }
+					},
+					required: ['color', 'sentiment']
+				}
 			}
 		});
 
-		const text = response.text;
+		const text = JSON.parse(response.text);
 
 		return json({
 			response: text,

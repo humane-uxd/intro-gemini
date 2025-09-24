@@ -98,7 +98,7 @@
 			console.log(sentimentData);
 
 			// update messages array (rather than botMessage) to trigger Svelte re-render
-			messages[messages.length - 1].sentimentColor = sentimentData.response;
+			messages[messages.length - 1].sentimentColor = sentimentData.response.color;
 		} catch (err) {
 			console.error('Error sending message:', err);
 			error = err.message;
