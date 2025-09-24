@@ -84,6 +84,21 @@
 			};
 
 			messages = [...messages, botMessage];
+
+			// Show message immediately, then query for sentiment for faster UX.
+			const sentimentResponse = await fetch('/api/judges/sentiment', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ message: botMessage.content })
+			});
+
+			const sentimentData = await sentimentResponse.json();
+			console.log(sentimentData);
+
+			// update messages array (rather than botMessage) to trigger Svelte re-render
+			messages[messages.length - 1].sentimentColor = sentimentData.response;
 		} catch (err) {
 			console.error('Error sending message:', err);
 			error = err.message;

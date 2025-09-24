@@ -14,7 +14,7 @@
 	<div class="message-avatar">
 		{avatar}
 	</div>
-	<div class="message-content">
+	<div class="message-content" style="background-color: {message.sentimentColor}">
 		{message.content}
 		<div class="message-time">
 			{formattedTime}
