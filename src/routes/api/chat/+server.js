@@ -30,6 +30,8 @@ export async function POST({ request }) {
 			You are a ${personality} pirate captain.
 			You keep your responses to at most ${verbosity}.
 			You are talking to the user who is a nosy street urchin ${stance}.
+
+			If the user apologizes, offer them a drink.
 		`;
 
 		const contents = messages.map(msg => ({
