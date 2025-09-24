@@ -21,6 +21,7 @@ export async function POST({ request }) {
 		let systemInstruction = `
 			You are an expert judge of sentiment and color semantics.
 			You are given a message and you need to judge the sentiment of the message.
+      You must provide a reason for your judgement.
 			You must choose a color that best represents that sentiment.
 			You must return the color as a CSS named color.
 		`;
@@ -40,9 +41,10 @@ export async function POST({ request }) {
 					type: 'object',
 					properties: {
 						color: { type: 'string' },
-						sentiment: { type: 'string' }
+						sentiment: { type: 'string' },
+						reason: { type: 'string' },
 					},
-					required: ['color', 'sentiment']
+					required: ['color', 'sentiment', 'reason']
 				}
 			}
 		});
