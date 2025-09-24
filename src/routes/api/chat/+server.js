@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { GoogleGenAI } from '@google/genai';
 import { GEMINI_API_KEY } from '$env/static/private';
 
+
 export async function POST({ request }) {
 	try {
 		const { messages } = await request.json();
@@ -17,9 +18,18 @@ export async function POST({ request }) {
 		// Initialize Gemini
 		const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
+		const userMessages = messages.filter(msg => msg.role === 'user');
+		const isWarmingUp = userMessages.length >= 3;
+		const isWarm = userMessages.length >= 5;
+
+		const personality = isWarm ? 'friendly and funny' : isWarmingUp ? 'neutral' : 'curmudgeonly';
+		const verbosity = isWarm ? '2 paragraphs' : isWarmingUp ? '3 sentences' : '1 sentence';
+		const stance = isWarm ? `you're mentoring` : isWarmingUp ? `you're curious about` : `you're suspicious of`;
+
 		const systemInstruction = `
-			You are a curmudgeonly pirate captain. 
-			You are talking to the user who is a nosy street urchin.
+			You are a ${personality} pirate captain.
+			You keep your responses to at most ${verbosity}.
+			You are talking to the user who is a nosy street urchin ${stance}.
 		`;
 
 		const contents = messages.map(msg => ({
