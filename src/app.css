@@ -303,3 +303,15 @@ body {
     align-self: flex-end;
   }
 }
+
+/* Streaming cursor animation */
+.streaming-cursor {
+  animation: blink 1s infinite;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}

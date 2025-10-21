@@ -111,8 +111,8 @@ export async function POST({ request }) {
 
 		console.log(contents[contents.length - 1]);
 
-		// Generate content using the new API
-		const response = await genAI.models.generateContent({
+		// Generate content using streaming API
+		const response = await genAI.models.generateContentStream({
 			model: 'gemini-2.5-flash',
 			contents,
 			config: {
@@ -120,27 +120,30 @@ export async function POST({ request }) {
 			},
 		});
 
-		const text = response.text;
-
-		return json({
-			response: text,
-			timestamp: new Date().toISOString()
+		// Create streaming response
+		const stream = new ReadableStream({
+			async start(controller) {
+				try {
+					for await (const chunk of response) {
+						controller.enqueue(chunk.text);
+					}
+					controller.close();
+				} catch (error) {
+					controller.close();
+					throw new Error(error.message || 'Failed to get response from Gemini');
+				}
+			}
 		});
 
+		return new Response(stream, {
+			headers: { 
+				'Content-Type': 'text/event-stream', 
+				'Cache-Control': 'no-cache', 
+				'Connection': 'keep-alive' 
+			},
+		});
 	} catch (error) {
 		console.error('Chat API error:', error);
-		
-		// Handle specific Gemini API errors
-		if (error.message?.includes('API_KEY_INVALID')) {
-			return json({ error: 'Invalid Gemini API key' }, { status: 401 });
-		}
-		
-		if (error.message?.includes('QUOTA_EXCEEDED')) {
-			return json({ error: 'API quota exceeded. Please try again later.' }, { status: 429 });
-		}
-
-		return json({ 
-			error: 'Failed to get response from Gemini. Please try again.' 
-		}, { status: 500 });
+		return error;
 	}
 }

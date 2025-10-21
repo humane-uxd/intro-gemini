@@ -6,10 +6,23 @@
 	let messages = [];
 	let isLoading = false;
 	let error = null;
+	let messagesContainer;
 
 	let mouseMovementDistance = 0;
 	let lastMousePosition = { x: 0, y: 0 };
 	let isMouseTracking = false;
+
+	// Auto-scroll to bottom when messages update
+	function scrollToBottom() {
+		if (messagesContainer) {
+			messagesContainer.scrollTop = messagesContainer.scrollHeight;
+		}
+	}
+
+	// Reactive statement to scroll when messages change
+	$: if (messages.length > 0) {
+		setTimeout(scrollToBottom, 10); // Small delay to ensure DOM is updated
+	}
 
 	// Initialize with welcome message
 	onMount(() => {
@@ -60,30 +73,43 @@
 		isLoading = true;
 		error = null;
 
+		// Create initial bot message for streaming
+		const botMessage = {
+			id: messages.length + 1,
+			role: 'bot',
+			content: '',
+			timestamp: new Date().toISOString(),
+			isStreaming: true
+		};
+		messages = [...messages, botMessage];
+
 		try {			
 			const response = await fetch('/api/chat', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify({ messages })
+				body: JSON.stringify({ messages: messages.slice(0, -1) }) // Exclude the streaming bot message
 			});
 
-			const data = await response.json();
-
 			if (!response.ok) {
-				throw new Error(data.error || 'Failed to get response');
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'Failed to get response');
 			}
 
-			// Add bot response
-			const botMessage = {
-				id: messages.length + 1,
-				role: 'bot',
-				content: data.response,
-				timestamp: data.timestamp
-			};
+			// Handle streaming response
+			const reader = response.body?.pipeThrough(new TextDecoderStream())?.getReader();
 
-			messages = [...messages, botMessage];
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) {
+					messages[messages.length - 1].isStreaming = false;
+					break;
+				};
+
+				messages[messages.length - 1].content += value;
+				messages[messages.length - 1].timestamp = new Date().toISOString();
+			}
 
 			// Show message immediately, then query for sentiment for faster UX.
 			const sentimentResponse = await fetch('/api/judges/sentiment', {
@@ -91,17 +117,18 @@
 				headers: {
 					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify({ message: botMessage.content })
+				body: JSON.stringify({ message: messages[messages.length - 1].content })
 			});
 
 			const sentimentData = await sentimentResponse.json();
-			console.log(sentimentData);
 
 			// update messages array (rather than botMessage) to trigger Svelte re-render
 			messages[messages.length - 1].sentimentColor = sentimentData.response.color;
 		} catch (err) {
 			console.error('Error sending message:', err);
 			error = err.message;
+			// Remove the streaming bot message on error
+			messages = messages.slice(0, -1);
 		} finally {
 			isLoading = false;
 		}
@@ -120,26 +147,10 @@
 	</header>
 
 	<div class="chat-container">
-		<div class="messages-container">
+		<div class="messages-container" bind:this={messagesContainer}>
 			{#each messages as message (message.id)}
 				<ChatMessage {message} />
 			{/each}
-			
-			{#if isLoading}
-				<div class="message bot">
-					<div class="message-avatar">🤖</div>
-					<div class="message-content">
-						<div class="loading">
-							<span>Thinking</span>
-							<div class="loading-dots">
-								<div class="loading-dot"></div>
-								<div class="loading-dot"></div>
-								<div class="loading-dot"></div>
-							</div>
-						</div>
-					</div>
-				</div>
-			{/if}
 
 			{#if error}
 				<div class="error-message">

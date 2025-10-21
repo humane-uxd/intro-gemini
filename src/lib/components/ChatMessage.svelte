@@ -16,6 +16,9 @@
 	</div>
 	<div class="message-content" style="background-color: {message.sentimentColor}">
 		{message.content}
+		{#if message.isStreaming}
+			<span class="streaming-cursor">|</span>
+		{/if}
 		<div class="message-time">
 			{formattedTime}
 		</div>
