@@ -11,12 +11,33 @@
 	let mouseMovementDistance = 0;
 	let lastMousePosition = { x: 0, y: 0 };
 	let isMouseTracking = false;
+	let sentimentPromise = null;
 
 	// Auto-scroll to bottom when messages update
 	function scrollToBottom() {
 		if (messagesContainer) {
 			messagesContainer.scrollTop = messagesContainer.scrollHeight;
 		}
+	}
+
+	// Simplified sentiment analysis - only call if previous call is done
+	async function analyzeSentiment(content) {
+		// If there's already a call in progress, skip this one
+		if (sentimentPromise) return;
+		
+		sentimentPromise = fetch('/api/judges/sentiment', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ message: content })
+		}).then(async response => {
+			const data = await response.json();
+			messages[messages.length - 1].sentimentColor = data.response.color;
+			messages = [...messages];
+		}).catch(error => {
+			console.error('Sentiment analysis failed:', error);
+		}).finally(() => {
+			sentimentPromise = null;
+		});
 	}
 
 	// Reactive statement to scroll when messages change
@@ -99,31 +120,26 @@
 
 			// Handle streaming response
 			const reader = response.body?.pipeThrough(new TextDecoderStream())?.getReader();
+			let isFirstChunk = true;
 
 			while (true) {
 				const { done, value } = await reader.read();
 				if (done) {
 					messages[messages.length - 1].isStreaming = false;
+					// Analyze sentiment for final content
+					analyzeSentiment(messages[messages.length - 1].content);
 					break;
 				};
 
 				messages[messages.length - 1].content += value;
 				messages[messages.length - 1].timestamp = new Date().toISOString();
+				
+				// Analyze sentiment for streaming chunks (throttled)
+				analyzeSentiment(messages[messages.length - 1].content);
+				isFirstChunk = false;
 			}
 
-			// Show message immediately, then query for sentiment for faster UX.
-			const sentimentResponse = await fetch('/api/judges/sentiment', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ message: messages[messages.length - 1].content })
-			});
-
-			const sentimentData = await sentimentResponse.json();
-
-			// update messages array (rather than botMessage) to trigger Svelte re-render
-			messages[messages.length - 1].sentimentColor = sentimentData.response.color;
+			// Sentiment analysis is now handled during streaming
 		} catch (err) {
 			console.error('Error sending message:', err);
 			error = err.message;
